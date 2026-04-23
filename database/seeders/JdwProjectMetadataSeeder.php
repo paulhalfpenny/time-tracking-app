@@ -127,7 +127,7 @@ class JdwProjectMetadataSeeder extends Seeder
                 'jdw_sort_order' => $data['sort'],
                 'jdw_status' => $data['status'] ?? null,
                 'jdw_estimated_launch' => $data['launch'] ?? null,
-                'jdw_description' => $data['desc'] ?? null,
+                'jdw_description' => $data['desc'],
             ]);
         }
 
@@ -159,7 +159,9 @@ class JdwProjectMetadataSeeder extends Seeder
         $rows = Project::whereRaw('LOWER(name) = ?', [strtolower($name)])->get();
 
         if ($rows->isEmpty()) {
-            $this->command?->warn("Project not found: {$name} — run harvest:import first.");
+            if ($this->command !== null) {
+                $this->command->warn("Project not found: {$name} — run harvest:import first.");
+            }
 
             return;
         }
