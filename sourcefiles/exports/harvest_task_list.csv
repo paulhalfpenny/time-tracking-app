@@ -1,0 +1,47 @@
+Task name,Billable rate,Billable,Active?
+Design,100.0,Yes,Yes
+Development,100.0,Yes,Yes
+"Project Management, Meetings, Reporting",100.0,Yes,Yes
+Business Development,100.0,Yes,Yes
+Holiday,100.0,Yes,Yes
+Planning,125.0,Yes,Yes
+UX,100.0,Yes,Yes
+Testing,100.0,Yes,Yes
+Release,100.0,Yes,Yes
+Maintenance,100.0,Yes,Yes
+Customer support,100.0,Yes,Yes
+Client Management,125.0,Yes,Yes
+Systems Admin,100.0,Yes,Yes
+Meeting,100.0,Yes,Yes
+Admin,100.0,Yes,Yes
+Content build,100.0,Yes,Yes
+Reporting,100.0,Yes,Yes
+Finance,100.0,Yes,Yes
+HR,100.0,Yes,Yes
+Training,100.0,No,Yes
+Content Creation,100.0,Yes,Yes
+Sick,100.0,Yes,Yes
+Event,100.0,Yes,Yes
+Break,100.0,Yes,Yes
+Lunch,100.0,Yes,Yes
+Research,100.0,No,Yes
+Recruitment,100.0,Yes,Yes
+Scope Writing,100.0,Yes,Yes
+Bank holiday,100.0,Yes,Yes
+Travel,100.0,Yes,Yes
+Programme Activity,100.0,Yes,Yes
+Strategy,100.0,Yes,Yes
+Other Absence,100.0,Yes,Yes
+Tavel,,Yes,Yes
+CRO Planning,,Yes,Yes
+CRO Meeting,,Yes,Yes
+Reporting & Analytics Development,,Yes,Yes
+Client Strategy,,Yes,Yes
+SEO Service Development,,Yes,Yes
+Paid Media Service Development,,Yes,Yes
+CI Process Development,,Yes,Yes
+CI Product Development,,Yes,Yes
+GA4 Implementation Audit,,Yes,Yes
+Accessibility Audit,,Yes,Yes
+Web Performance Audit,,Yes,Yes
+Rework,100.0,No,Yes

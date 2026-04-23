@@ -17,7 +17,10 @@ class GoogleController extends Controller
         /** @var GoogleProvider $provider */
         $provider = Socialite::driver('google');
 
-        return $provider->scopes(['openid', 'email', 'profile'])->redirect();
+        return $provider
+            ->scopes(['openid', 'email', 'profile', 'https://www.googleapis.com/auth/calendar.readonly'])
+            ->with(['access_type' => 'offline', 'prompt' => 'consent'])
+            ->redirect();
     }
 
     public function callback(): RedirectResponse
@@ -49,12 +52,18 @@ class GoogleController extends Controller
                 'name' => $googleUser->getName(),
                 'role' => Role::User,
                 'is_active' => true,
+                'google_access_token' => $googleUser->token,
+                'google_refresh_token' => $googleUser->refreshToken,
+                'google_token_expires_at' => now()->addSeconds(max(0, ($googleUser->expiresIn ?? 3600) - 60)),
             ]);
         } else {
             $user->update([
                 'google_sub' => $googleUser->getId(),
                 'name' => $googleUser->getName(),
                 'last_login_at' => now(),
+                'google_access_token' => $googleUser->token,
+                'google_refresh_token' => $googleUser->refreshToken ?? $user->google_refresh_token,
+                'google_token_expires_at' => now()->addSeconds(max(0, ($googleUser->expiresIn ?? 3600) - 60)),
             ]);
         }
 

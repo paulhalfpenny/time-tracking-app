@@ -18,6 +18,16 @@ use App\Livewire\Reports\TimeReport;
 use App\Livewire\Timesheet\DayView;
 use Illuminate\Support\Facades\Route;
 
+// Local-only demo login — bypasses Google SSO for local tours.
+if (app()->environment('local')) {
+    Route::get('/demo-login', function () {
+        $user = App\Models\User::where('email', 'paul@filteragency.com')->firstOrFail();
+        auth()->login($user);
+
+        return redirect()->route('timesheet');
+    })->name('demo.login');
+}
+
 // Auth routes (unauthenticated)
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('auth.google');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('auth.google.callback')->middleware('throttle:google-oauth');

@@ -23,6 +23,9 @@ class User extends Authenticatable
 
     protected $fillable = [
         'google_sub',
+        'google_access_token',
+        'google_refresh_token',
+        'google_token_expires_at',
         'email',
         'name',
         'role',
@@ -34,7 +37,7 @@ class User extends Authenticatable
         'last_login_at',
     ];
 
-    protected $hidden = [];
+    protected $hidden = ['google_access_token', 'google_refresh_token'];
 
     protected function casts(): array
     {
@@ -45,6 +48,9 @@ class User extends Authenticatable
             'default_hourly_rate' => 'decimal:2',
             'weekly_capacity_hours' => 'decimal:2',
             'last_login_at' => 'datetime',
+            'google_access_token' => 'encrypted',
+            'google_refresh_token' => 'encrypted',
+            'google_token_expires_at' => 'datetime',
         ];
     }
 

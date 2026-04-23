@@ -33,8 +33,8 @@ final class HoursParser
             return self::validate(round((int) $m[1] / 60, 2));
         }
 
-        // decimal / integer
-        if (preg_match('/^\d+(\.\d+)?$/', $input)) {
+        // decimal / integer (allow leading dot: .5, .25)
+        if (preg_match('/^\d*\.?\d+$/', $input)) {
             return self::validate((float) $input);
         }
 

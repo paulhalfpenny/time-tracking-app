@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Services\CalendarService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -46,6 +47,16 @@ class DayView extends Component
 
     public string $hoursError = '';
 
+    // Calendar panel state
+    public bool $showCalendarPanel = false;
+
+    /** @var array<int, array{id: string, title: string, start_formatted: string, end_formatted: string, hours: float}> */
+    public array $calendarEvents = [];
+
+    public bool $calendarLoading = false;
+
+    public ?string $calendarError = null;
+
     public function mount(): void
     {
         $this->selectedDate = Carbon::today()->toDateString();
@@ -55,6 +66,16 @@ class DayView extends Component
     public function selectDate(string $date): void
     {
         $this->selectedDate = $date;
+    }
+
+    public function previousWeek(): void
+    {
+        $this->selectedDate = Carbon::parse($this->selectedDate)->subWeek()->toDateString();
+    }
+
+    public function nextWeek(): void
+    {
+        $this->selectedDate = Carbon::parse($this->selectedDate)->addWeek()->toDateString();
     }
 
     public function openNewModal(): void
@@ -84,6 +105,9 @@ class DayView extends Component
     public function closeModal(): void
     {
         $this->showModal = false;
+        $this->showCalendarPanel = false;
+        $this->calendarEvents = [];
+        $this->calendarError = null;
         $this->resetModal();
     }
 
@@ -105,6 +129,43 @@ class DayView extends Component
         $this->selectedTaskId = null;
         $this->projectSearch = '';
         $this->taskSearch = '';
+    }
+
+    public function startTimerFromModal(): void
+    {
+        $this->hoursError = '';
+
+        $this->validate([
+            'selectedProjectId' => 'required|integer',
+            'selectedTaskId' => 'required|integer',
+            'entryDate' => 'required|date',
+        ]);
+
+        $hours = 0.0;
+        if ($this->hoursInput !== '' && $this->hoursInput !== '0:00') {
+            try {
+                $hours = HoursParser::parse($this->hoursInput);
+            } catch (InvalidArgumentException $e) {
+                $this->hoursError = $e->getMessage();
+
+                return;
+            }
+        }
+
+        /** @var User $user */
+        $user = auth()->user();
+        $service = app(TimeEntryService::class);
+
+        $entry = $service->create($user, [
+            'project_id' => (int) $this->selectedProjectId,
+            'task_id' => (int) $this->selectedTaskId,
+            'spent_on' => $this->entryDate,
+            'hours' => $hours,
+            'notes' => $this->notes !== '' ? $this->notes : null,
+        ]);
+
+        $service->startTimer($entry);
+        $this->closeModal();
     }
 
     public function save(): void
@@ -184,6 +245,55 @@ class DayView extends Component
         app(TimeEntryService::class)->stopTimer($entry);
     }
 
+    public function openCalendarPanel(): void
+    {
+        $this->showCalendarPanel = true;
+        $this->calendarError = null;
+        $this->calendarLoading = false;
+
+        /** @var User $user */
+        $user = auth()->user();
+        $service = app(CalendarService::class);
+
+        if (! $service->hasToken($user)) {
+            $this->calendarError = 'no_token';
+
+            return;
+        }
+
+        $events = $service->getTodayEvents($user);
+
+        if ($events === []) {
+            $this->calendarError = 'empty';
+
+            return;
+        }
+
+        $this->calendarEvents = $events;
+    }
+
+    public function closeCalendarPanel(): void
+    {
+        $this->showCalendarPanel = false;
+        $this->calendarEvents = [];
+        $this->calendarError = null;
+    }
+
+    public function pullFromCalendarEvent(string $title, float $hours): void
+    {
+        $this->notes = $title;
+        $this->hoursInput = $this->formatHoursAsTime($hours);
+        $this->showCalendarPanel = false;
+    }
+
+    private function formatHoursAsTime(float $hours): string
+    {
+        $h = (int) $hours;
+        $m = (int) round(($hours - $h) * 60);
+
+        return $h.':'.str_pad((string) $m, 2, '0', STR_PAD_LEFT);
+    }
+
     #[On('timerPoll')]
     public function refreshForTimer(): void
     {
@@ -230,6 +340,9 @@ class DayView extends Component
             ? $projectsForPicker->firstWhere('id', $this->selectedProjectId)
             : null;
 
+        // Track which calendar event titles are already logged today
+        $usedEventTitles = $dayEntries->pluck('notes')->filter()->map(fn ($n) => strtolower($n))->all();
+
         return view('livewire.timesheet.day-view', [
             'weekDays' => $weekDays,
             'dayTotals' => $dayTotals,
@@ -238,7 +351,27 @@ class DayView extends Component
             'dayTotal' => $dayTotal,
             'projectsForPicker' => $projectsForPicker,
             'selectedProject' => $selectedProject,
+            'usedEventTitles' => $usedEventTitles,
+            'emptySong' => $this->randomSong(),
         ]);
+    }
+
+    /** @return array{song_name: string, album: string, year: string} */
+    private function randomSong(): array
+    {
+        $path = base_path('sourcefiles/songs/depeche_mode_song_titles.csv');
+        $handle = fopen($path, 'r');
+        $songs = [];
+
+        fgetcsv($handle); // skip header
+        while (($row = fgetcsv($handle)) !== false) {
+            if (($row[3] ?? '') === 'album_track') {
+                $songs[] = ['song_name' => $row[0], 'album' => $row[1], 'year' => $row[2]];
+            }
+        }
+        fclose($handle);
+
+        return $songs[array_rand($songs)];
     }
 
     private function resetModal(): void

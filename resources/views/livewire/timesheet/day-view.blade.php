@@ -3,6 +3,43 @@
     x-data="{}"
     @keydown.n.window="$wire.openNewModal()"
 >
+    {{-- Day header --}}
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+            <button
+                wire:click="previousWeek"
+                class="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition text-gray-500 hover:text-gray-800 shadow-sm"
+                title="Previous week"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <button
+                wire:click="nextWeek"
+                class="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition text-gray-500 hover:text-gray-800 shadow-sm"
+                title="Next week"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+            <h2 class="text-lg font-semibold text-gray-800">
+                {{ \Carbon\Carbon::parse($selectedDate)->format('l, j F Y') }}
+            </h2>
+        </div>
+        <button
+            wire:click="openNewModal"
+            class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+            title="New entry (N)"
+        >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Track time
+        </button>
+    </div>
+
     {{-- Week strip --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
         <div class="grid grid-cols-7 divide-x divide-gray-100">
@@ -30,28 +67,13 @@
         </div>
     </div>
 
-    {{-- Day header --}}
-    <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-800">
-            {{ \Carbon\Carbon::parse($selectedDate)->format('l, j F Y') }}
-        </h2>
-        <button
-            wire:click="openNewModal"
-            class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-            title="New entry (N)"
-        >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Track time
-        </button>
-    </div>
-
     {{-- Entries list --}}
     @if ($dayEntries->isEmpty())
-        <div class="text-center py-16 text-gray-400">
-            <p class="text-base">No time entries for this day.</p>
-            <p class="text-sm mt-1">Press <kbd class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs font-mono">N</kbd> or click Track time to add one.</p>
+        <div class="rounded-xl bg-gray-100 flex items-center justify-center px-8 text-center" style="min-height: 350px">
+            <div>
+                <p class="text-lg italic text-gray-500">"{{ $emptySong['song_name'] }}"</p>
+                <p class="mt-2 text-sm text-gray-400">{{ $emptySong['album'] }} &middot; {{ $emptySong['year'] }} &middot; Depeche Mode</p>
+            </div>
         </div>
     @else
         <div class="space-y-2">
@@ -137,198 +159,322 @@
         <span>Week: <strong class="text-gray-800">{{ number_format($weekTotal, 2) }}h</strong></span>
     </div>
 
-    {{-- Submit week stub --}}
-    <div class="mt-4 flex justify-end">
-        <button
-            disabled
-            title="Coming soon"
-            class="text-sm text-gray-400 border border-gray-200 px-4 py-2 rounded-lg cursor-not-allowed"
-        >Submit week for approval</button>
-    </div>
 
     {{-- ============================================================
          Entry modal
     ============================================================ --}}
     @if ($showModal)
+
+        {{-- ============================================================
+             Calendar sidebar — slides in from the left over the page
+        ============================================================ --}}
+        <div
+            x-data="{ open: @entangle('showCalendarPanel') }"
+            x-show="open"
+            x-transition:enter="transition-transform ease-out duration-300"
+            x-transition:enter-start="-translate-x-full"
+            x-transition:enter-end="translate-x-0"
+            x-transition:leave="transition-transform ease-in duration-200"
+            x-transition:leave-start="translate-x-0"
+            x-transition:leave-end="-translate-x-full"
+            class="fixed inset-y-0 left-0 z-[60] w-80 bg-white shadow-2xl flex flex-col"
+            style="display:none"
+        >
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wide">Today's events from</div>
+                    <div class="font-semibold text-gray-900 text-sm mt-0.5">Default Calendar</div>
+                </div>
+                <button wire:click="closeCalendarPanel" class="text-gray-400 hover:text-gray-600 p-1 rounded transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-2">
+                @if ($calendarError === 'no_token')
+                    <div class="text-center py-8 px-3">
+                        <svg class="w-8 h-8 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm text-gray-500 mb-3">Calendar access requires signing in with Google.</p>
+                        <a href="{{ route('auth.google') }}" class="text-sm text-blue-600 hover:underline">Re-sign in to grant access →</a>
+                    </div>
+                @elseif ($calendarError === 'empty' || empty($calendarEvents))
+                    <div class="text-center py-8">
+                        <p class="text-sm text-gray-400">No events today.</p>
+                    </div>
+                @else
+                    @foreach ($calendarEvents as $event)
+                        @php
+                            $used = in_array(strtolower($event['title']), $usedEventTitles, true);
+                            $hoursLabel = $event['hours'] == 1.0 ? '1 hour'
+                                : number_format($event['hours'], 2) . ' hours';
+                        @endphp
+                        <button
+                            @if (! $used) wire:click="pullFromCalendarEvent('{{ addslashes($event['title']) }}', {{ $event['hours'] }})" @endif
+                            {{ $used ? 'disabled' : '' }}
+                            class="w-full text-left p-3 rounded-lg border transition
+                                {{ $used
+                                    ? 'border-gray-100 bg-gray-50 cursor-default'
+                                    : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 cursor-pointer' }}"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="font-semibold text-sm {{ $used ? 'text-gray-400' : 'text-gray-900' }} leading-snug">
+                                    {{ $event['title'] }}
+                                </div>
+                                @if ($used)
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                @endif
+                            </div>
+                            <div class="text-xs {{ $used ? 'text-gray-400' : 'text-gray-500' }} mt-0.5">
+                                {{ $event['start_formatted'] }} – {{ $event['end_formatted'] }}
+                            </div>
+                            <div class="text-xs {{ $used ? 'text-gray-400' : 'text-gray-500' }}">
+                                {{ $hoursLabel }}
+                            </div>
+                        </button>
+                    @endforeach
+                @endif
+            </div>
+        </div>
+
+        {{-- Modal backdrop + centred dialog --}}
         <div
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
             @keydown.escape.window="$wire.closeModal()"
         >
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" @click.stop>
+            <div
+                class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4"
+                x-data="{
+                    projectOpen: false,
+                    taskOpen: false,
+                    get isTimerMode() {
+                        const h = $wire.hoursInput ?? '';
+                        return h.trim() === '';
+                    }
+                }"
+                @click.stop
+            >
                 {{-- Modal header --}}
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h3 class="font-semibold text-gray-900">
-                        {{ $editingEntryId ? 'Edit entry' : 'Track time' }}
+                <div class="px-6 py-4 border-b border-gray-100 text-center relative">
+                    <h3 class="font-semibold text-gray-900 text-base">
+                        @if ($editingEntryId)
+                            Edit entry
+                        @else
+                            New time entry for {{ \Carbon\Carbon::parse($selectedDate)->format('l, j M') }}
+                        @endif
                     </h3>
-                    <button wire:click="closeModal" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
                 </div>
 
-                <div class="px-6 py-4 space-y-4">
-                    @if ($selectedProjectId === null)
-                        {{-- Step 1: Project picker --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Project</label>
-                            <input
-                                type="text"
-                                wire:model.live="projectSearch"
-                                placeholder="Search projects…"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                                autofocus
-                            />
-                        </div>
-                        <div class="max-h-64 overflow-y-auto space-y-1">
-                            @php
-                                $grouped = $projectsForPicker
-                                    ->when($projectSearch !== '', fn ($c) => $c->filter(
-                                        fn ($p) => str_contains(strtolower($p->name), strtolower($projectSearch))
-                                            || str_contains(strtolower($p->client->name), strtolower($projectSearch))
-                                    ))
-                                    ->groupBy(fn ($p) => $p->client->name)
-                                    ->sortKeys();
-                            @endphp
-                            @forelse ($grouped as $clientName => $projects)
-                                <div>
-                                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 py-1">{{ $clientName }}</div>
+                <div class="px-6 py-5 space-y-3">
+
+                    {{-- Project / Task label --}}
+                    <div class="text-sm font-semibold text-gray-700">Project / Task</div>
+
+                    {{-- Project dropdown --}}
+                    <div class="relative z-20">
+                        <button
+                            type="button"
+                            @click="projectOpen = !projectOpen; taskOpen = false"
+                            class="w-full flex items-center justify-between border border-gray-300 rounded-lg px-4 py-3 text-left bg-white hover:border-gray-400 transition focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                            @if ($selectedProject)
+                                <div class="min-w-0">
+                                    <div class="text-xs text-gray-500 leading-none mb-0.5">{{ $selectedProject->client->name }}</div>
+                                    <div class="font-semibold text-gray-900 text-sm leading-none">{{ $selectedProject->name }}</div>
+                                </div>
+                            @else
+                                <span class="text-gray-400 text-sm">Select a project…</span>
+                            @endif
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="projectOpen"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            @click.outside="projectOpen = false"
+                            class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg"
+                            style="display: none"
+                        >
+                            <div class="p-2 border-b border-gray-100">
+                                <input
+                                    type="text"
+                                    wire:model.live="projectSearch"
+                                    placeholder="Search projects…"
+                                    class="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    x-init="$el.focus()"
+                                />
+                            </div>
+                            <div class="max-h-60 overflow-y-auto py-1">
+                                @php
+                                    $grouped = $projectsForPicker
+                                        ->when($projectSearch !== '', fn ($c) => $c->filter(
+                                            fn ($p) => str_contains(strtolower($p->name), strtolower($projectSearch))
+                                                || str_contains(strtolower($p->client->name), strtolower($projectSearch))
+                                        ))
+                                        ->groupBy(fn ($p) => $p->client->name)
+                                        ->sortKeys();
+                                @endphp
+                                @forelse ($grouped as $clientName => $projects)
+                                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5 mt-1 first:mt-0">{{ $clientName }}</div>
                                     @foreach ($projects as $project)
                                         <button
+                                            type="button"
                                             wire:click="selectProject({{ $project->id }})"
-                                            class="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition"
+                                            @click="projectOpen = false; taskOpen = true"
+                                            class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition"
                                         >{{ $project->name }}</button>
                                     @endforeach
+                                @empty
+                                    <p class="text-sm text-gray-400 px-3 py-4 text-center">No projects found.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Task dropdown --}}
+                    @php $chosenTask = $selectedProject?->tasks->firstWhere('id', $selectedTaskId); @endphp
+                    <div class="relative z-10">
+                        <button
+                            type="button"
+                            @click="if ({{ $selectedProjectId ? 'true' : 'false' }}) { taskOpen = !taskOpen; projectOpen = false; }"
+                            class="w-full flex items-center justify-between border rounded-lg px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-green-500
+                                {{ $selectedProjectId ? 'border-gray-300 bg-white hover:border-gray-400' : 'border-gray-200 bg-gray-50 cursor-not-allowed' }}"
+                        >
+                            @if ($chosenTask)
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $chosenTask->colour }}"></span>
+                                    <span class="font-medium text-gray-900 text-sm">{{ $chosenTask->name }}</span>
                                 </div>
-                            @empty
-                                <p class="text-sm text-gray-400 px-2 py-4 text-center">No projects found.</p>
-                            @endforelse
-                        </div>
-
-                    @elseif ($selectedTaskId === null)
-                        {{-- Step 2: Task picker --}}
-                        <div class="flex items-center gap-2">
-                            <button wire:click="backToProjectPicker" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </button>
-                            <span class="font-medium text-gray-800 text-sm">{{ $selectedProject?->name }}</span>
-                        </div>
-                        <div>
-                            <input
-                                type="text"
-                                wire:model.live="taskSearch"
-                                placeholder="Search tasks…"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                                autofocus
-                            />
-                        </div>
-                        <div class="max-h-60 overflow-y-auto space-y-1">
-                            @php
-                                $assignedTasks = $selectedProject?->tasks ?? collect();
-                                $billableTasks = $assignedTasks->filter(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
-                                $nonBillableTasks = $assignedTasks->reject(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
-
-                                if ($taskSearch !== '') {
-                                    $billableTasks = $billableTasks->filter(fn ($t) => str_contains(strtolower($t->name), strtolower($taskSearch)));
-                                    $nonBillableTasks = $nonBillableTasks->filter(fn ($t) => str_contains(strtolower($t->name), strtolower($taskSearch)));
-                                }
-                            @endphp
-                            @if ($billableTasks->isNotEmpty())
-                                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 py-1">Billable</div>
-                                @foreach ($billableTasks->sortBy('name') as $task)
-                                    <button
-                                        wire:click="selectTask({{ $task->id }})"
-                                        class="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition flex items-center gap-2"
-                                    >
-                                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
-                                        {{ $task->name }}
-                                    </button>
-                                @endforeach
+                            @else
+                                <span class="text-sm {{ $selectedProjectId ? 'text-gray-400' : 'text-gray-300' }}">Select a task…</span>
                             @endif
-                            @if ($nonBillableTasks->isNotEmpty())
-                                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 py-1 {{ $billableTasks->isNotEmpty() ? 'mt-2' : '' }}">Non-billable</div>
-                                @foreach ($nonBillableTasks->sortBy('name') as $task)
-                                    <button
-                                        wire:click="selectTask({{ $task->id }})"
-                                        class="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-800 hover:bg-gray-50 transition flex items-center gap-2"
-                                    >
-                                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
-                                        {{ $task->name }}
-                                    </button>
-                                @endforeach
-                            @endif
-                            @if ($billableTasks->isEmpty() && $nonBillableTasks->isEmpty())
-                                <p class="text-sm text-gray-400 px-2 py-4 text-center">No tasks found.</p>
-                            @endif
-                        </div>
+                            <svg class="w-4 h-4 flex-shrink-0 ml-2 {{ $selectedProjectId ? 'text-gray-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
 
-                    @else
-                        {{-- Step 3: Hours + notes --}}
-                        @php $chosenTask = $selectedProject?->tasks->firstWhere('id', $selectedTaskId); @endphp
-                        <div class="flex items-center gap-2 text-sm text-gray-600">
-                            <button wire:click="backToProjectPicker" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </button>
-                            <span class="font-medium text-gray-800">{{ $selectedProject?->name }}</span>
-                            <span class="text-gray-400">·</span>
-                            <span>{{ $chosenTask?->name }}</span>
+                        <div
+                            x-show="taskOpen"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            @click.outside="taskOpen = false"
+                            class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg"
+                            style="display: none"
+                        >
+                            <div class="max-h-60 overflow-y-auto py-1">
+                                @if ($selectedProject)
+                                    @php
+                                        $assignedTasks = $selectedProject->tasks ?? collect();
+                                        $billableTasks = $assignedTasks->filter(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
+                                        $nonBillableTasks = $assignedTasks->reject(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
+                                    @endphp
+                                    @if ($billableTasks->isNotEmpty())
+                                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5">Billable</div>
+                                        @foreach ($billableTasks->sortBy('name') as $task)
+                                            <button
+                                                type="button"
+                                                wire:click="selectTask({{ $task->id }})"
+                                                @click="taskOpen = false"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition flex items-center gap-2"
+                                            >
+                                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
+                                                {{ $task->name }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+                                    @if ($nonBillableTasks->isNotEmpty())
+                                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5 {{ $billableTasks->isNotEmpty() ? 'mt-1' : '' }}">Non-billable</div>
+                                        @foreach ($nonBillableTasks->sortBy('name') as $task)
+                                            <button
+                                                type="button"
+                                                wire:click="selectTask({{ $task->id }})"
+                                                @click="taskOpen = false"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 hover:text-gray-700 transition flex items-center gap-2"
+                                            >
+                                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
+                                                {{ $task->name }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+                                    @if ($billableTasks->isEmpty() && $nonBillableTasks->isEmpty())
+                                        <p class="text-sm text-gray-400 px-3 py-4 text-center">No tasks assigned.</p>
+                                    @endif
+                                @endif
+                            </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Hours</label>
+                    {{-- Notes + Time row --}}
+                    <div class="flex gap-3 items-start">
+                        <textarea
+                            wire:model="notes"
+                            rows="3"
+                            placeholder="Notes (optional)"
+                            class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none placeholder-gray-400"
+                        ></textarea>
+                        <div class="flex-shrink-0 w-24">
                             <input
                                 type="text"
                                 wire:model="hoursInput"
-                                placeholder="e.g. 1.5 or 1:30 or 90m"
-                                class="w-full border {{ $hoursError ? 'border-red-400' : 'border-gray-300' }} rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                                autofocus
-                                wire:keydown.enter="save"
+                                placeholder="0.00"
+                                class="w-full border {{ $hoursError ? 'border-red-400' : 'border-gray-300' }} rounded-lg px-3 py-2.5 text-sm text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
                             />
                             @if ($hoursError)
-                                <p class="text-red-500 text-xs mt-1">{{ $hoursError }}</p>
+                                <p class="text-red-500 text-xs mt-1 text-center">{{ $hoursError }}</p>
                             @endif
                         </div>
+                    </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
-                            <textarea
-                                wire:model="notes"
-                                rows="3"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                                placeholder="What did you work on?"
-                            ></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input
-                                type="date"
-                                wire:model="entryDate"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-                    @endif
                 </div>
 
                 {{-- Modal footer --}}
-                @if ($selectedTaskId !== null)
-                    <div class="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
-                        <button
-                            wire:click="closeModal"
-                            class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-                        >Cancel</button>
+                <div class="flex items-center px-6 py-4 border-t border-gray-100">
+                    @if ($editingEntryId)
                         <button
                             wire:click="save"
-                            class="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                            class="px-5 py-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-full transition"
                         >Save entry</button>
+                    @else
+                        <button
+                            @click="isTimerMode ? $wire.startTimerFromModal() : $wire.save()"
+                            class="px-5 py-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-full transition"
+                            x-text="isTimerMode ? 'Start timer' : 'Save entry'"
+                        ></button>
+                    @endif
+                    <button
+                        wire:click="closeModal"
+                        class="ml-3 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-full transition"
+                    >Cancel</button>
+                    <div class="ml-auto">
+                        <button
+                            wire:click="openCalendarPanel"
+                            class="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 transition"
+                        >
+                            {{-- Google Calendar icon --}}
+                            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="4" width="18" height="18" rx="2" fill="white" stroke="#dadce0" stroke-width="1.2"/>
+                                <rect x="3" y="9" width="18" height="1.2" fill="#4285F4"/>
+                                <rect x="7.5" y="2" width="1.5" height="4" rx="0.75" fill="#4285F4"/>
+                                <rect x="15" y="2" width="1.5" height="4" rx="0.75" fill="#4285F4"/>
+                                <text x="12" y="18" text-anchor="middle" font-size="7" font-weight="bold" fill="#4285F4" font-family="sans-serif">{{ now()->format('j') }}</text>
+                            </svg>
+                            Pull in a calendar event
+                        </button>
                     </div>
-                @endif
+                </div>
+
             </div>
-        </div>
+
+        </div>{{-- end modal backdrop --}}
     @endif
 
     {{-- 60-second poll for running timers --}}
