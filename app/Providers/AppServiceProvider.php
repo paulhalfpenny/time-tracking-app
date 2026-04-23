@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,5 +18,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('google-oauth', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());
         });
+
+        Gate::define('access-admin', fn (User $user) => $user->isAdmin());
+        Gate::define('access-reports', fn (User $user) => $user->isManager());
     }
 }

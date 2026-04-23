@@ -29,10 +29,21 @@
                 @endif
 
                 @if(auth()->user()->isAdmin())
-                <a href="#"
-                   class="text-sm font-medium text-gray-600 hover:text-gray-900">
-                    Admin
-                </a>
+                <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                    <button @click="open = !open"
+                            class="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                        Admin <span class="text-xs">▾</span>
+                    </button>
+                    <div x-show="open" x-cloak
+                         class="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded shadow-md z-50 py-1">
+                        <a href="{{ route('admin.users') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Users</a>
+                        <a href="{{ route('admin.clients') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Clients</a>
+                        <a href="{{ route('admin.projects') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Projects</a>
+                        <a href="{{ route('admin.tasks') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Tasks</a>
+                        <hr class="my-1 border-gray-100">
+                        <a href="{{ route('admin.rates') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Rates</a>
+                    </div>
+                </div>
                 @endif
             </div>
 

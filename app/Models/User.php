@@ -4,12 +4,17 @@ namespace App\Models;
 
 use App\Enums\Role;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 /**
  * @property Role $role
+ * @property Collection<int, Project> $projects
+ * @property Collection<int, TimeEntry> $timeEntries
  */
 class User extends Authenticatable
 {
@@ -41,6 +46,19 @@ class User extends Authenticatable
             'weekly_capacity_hours' => 'decimal:2',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    /** @return BelongsToMany<Project, $this> */
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class)
+            ->withPivot(['hourly_rate_override']);
+    }
+
+    /** @return HasMany<TimeEntry, $this> */
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
     }
 
     public function isAdmin(): bool
