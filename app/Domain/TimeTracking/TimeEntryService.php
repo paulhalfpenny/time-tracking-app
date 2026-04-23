@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 final class TimeEntryService
 {
@@ -78,17 +79,29 @@ final class TimeEntryService
 
     public function startTimer(TimeEntry $entry): void
     {
-        // Stop any other running timer for this user first
-        TimeEntry::where('user_id', $entry->user_id)
-            ->where('is_running', true)
-            ->where('id', '!=', $entry->id)
-            ->each(fn (TimeEntry $running) => $this->stopTimer($running));
+        // Transaction + row lock: prevents two concurrent requests racing to
+        // start a second timer for the same user simultaneously.
+        DB::transaction(function () use ($entry): void {
+            // Re-fetch with lock so concurrent calls queue behind this one
+            $locked = TimeEntry::lockForUpdate()->find($entry->id);
+            if ($locked === null || $locked->is_running) {
+                return; // already running or deleted
+            }
 
-        $entry->update([
-            'is_running' => true,
-            'timer_started_at' => Carbon::now(),
-            'spent_on' => $entry->spent_on ?? Carbon::today()->toDateString(),
-        ]);
+            // Auto-stop any other running timer for this user
+            TimeEntry::where('user_id', $entry->user_id)
+                ->where('is_running', true)
+                ->where('id', '!=', $entry->id)
+                ->lockForUpdate()
+                ->each(fn (TimeEntry $running) => $this->stopTimer($running));
+
+            $locked->update([
+                'is_running' => true,
+                'timer_started_at' => Carbon::now(),
+            ]);
+        });
+
+        $entry->refresh();
     }
 
     public function stopTimer(TimeEntry $entry): void
@@ -97,7 +110,7 @@ final class TimeEntryService
             return;
         }
 
-        $elapsed = Carbon::now()->diffInSeconds($entry->timer_started_at) / 3600;
+        $elapsed = $entry->timer_started_at->diffInSeconds(Carbon::now()) / 3600;
         $newHours = round((float) $entry->hours + $elapsed, 2);
         $newHours = max(0.01, min(24.0, $newHours));
 
