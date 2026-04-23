@@ -22,8 +22,8 @@
                 </a>
 
                 @if(auth()->user()->isManager())
-                <a href="#"
-                   class="text-sm font-medium text-gray-600 hover:text-gray-900">
+                <a href="{{ route('reports.time') }}"
+                   class="text-sm font-medium {{ request()->routeIs('reports.*') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900' }}">
                     Reports
                 </a>
                 @endif
