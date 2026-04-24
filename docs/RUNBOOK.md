@@ -1,80 +1,80 @@
-# Filter Time Tracker — Runbook
+# Filter Internal Tools — Runbook
 
 ## Environments
 
 | Environment | URL | Server |
 |---|---|---|
-| Production | https://time.filter.agency | DigitalOcean droplet (2 vCPU / 4GB) |
-| Staging | https://staging-time.filter.agency | DigitalOcean droplet ($6) |
+| Production | https://internal.filter.agency | DigitalOcean droplet (2 vCPU / 4GB / 120GB) `159.65.19.139` |
 
-Managed via Laravel Forge. All deploys go through Forge — do not SSH and run artisan manually in production unless recovering from an incident.
+Manual server setup — no Laravel Forge. Deploys are handled by GitHub Actions.
 
 ---
 
 ## Deploy
 
-Deploys are triggered automatically on merge to `main` via Forge's GitHub integration.
+Deploys trigger automatically on push to `main` via GitHub Actions (`.github/workflows/deploy.yml`).
 
-To trigger a manual deploy:
-```
-# Via Forge UI: Sites → Filter Time Tracker → Deploy Now
-# Or via Forge CLI if configured:
-forge deploy <site-id>
-```
+The deploy workflow SSHes into the droplet as the `deploy` user and runs:
 
-Post-deploy steps run automatically (configured in Forge deploy script):
 ```bash
-cd /home/forge/time.filter.agency
+cd /var/www/internal.filter.agency
+git pull origin main
 composer install --no-dev --no-interaction --optimize-autoloader
+npm ci && npm run build
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-npm ci && npm run build
-php artisan queue:restart
 ```
+
+To trigger a manual deploy, push any commit to `main` or run an empty commit:
+
+```bash
+git commit --allow-empty -m "chore: trigger deploy"
+git push origin main
+```
+
+Deploy logs are visible in GitHub → Actions tab.
 
 ---
 
 ## Rollback
 
-If a deploy breaks production:
-
-1. In Forge, go to **Deployments** tab → find the last good deploy → **Rollback**.
-2. If Forge rollback is not available, SSH in and revert manually:
+If a deploy breaks production, SSH in and revert manually:
 
 ```bash
-ssh forge@<droplet-ip>
-cd /home/forge/time.filter.agency
+ssh deploy@159.65.19.139
+cd /var/www/internal.filter.agency
 git log --oneline -10          # find the last good commit hash
 git checkout <commit-hash>
 composer install --no-dev --no-interaction --optimize-autoloader
+npm ci && npm run build
 php artisan migrate --force    # only if rollback includes a migration reversal
 php artisan config:cache && php artisan route:cache && php artisan view:cache
-sudo supervisorctl restart all
 ```
 
-3. If a migration must be reversed: `php artisan migrate:rollback` — confirm with Paul before running in production.
+If a migration must be reversed: `php artisan migrate:rollback` — confirm with Paul before running in production.
 
 ---
 
 ## Restore from Backup
 
-Backups are taken nightly via Spatie Laravel Backup → DigitalOcean Spaces (`filter-time-backups` bucket), retained for 30 days.
+Backups are taken via daily DigitalOcean droplet snapshots. These cover the full server state: OS, MySQL data directory, app files, and `.env`.
 
-### Restore database
+To restore from a snapshot, use the DigitalOcean console to restore the droplet to the desired snapshot. Note: this restores the entire server to that point in time.
+
+### Restore database only (from mysqldump)
+
+If you need to restore just the database without a full droplet restore:
 
 ```bash
-# 1. Download the latest backup from DO Spaces (via s3cmd or the DO console)
-s3cmd get s3://filter-time-backups/latest/db-YYYY-MM-DD.sql.gz /tmp/restore.sql.gz
+# 1. Take a manual dump first (safety net)
+mysqldump -u internal_tools -p internal_tools > /tmp/pre-restore-backup.sql
 
-# 2. Decompress
-gunzip /tmp/restore.sql.gz
+# 2. Restore from a dump file
+mysql -u internal_tools -p internal_tools < /path/to/dump.sql
 
-# 3. Restore (this overwrites the current database — confirm first)
-mysql -u forge -p time_tracking < /tmp/restore.sql
-
-# 4. Clear caches
+# 3. Clear caches
 php artisan cache:clear
 ```
 
@@ -84,15 +84,19 @@ Application files are in git — re-deploy from the correct commit rather than r
 
 ---
 
-## Staging restore test (automated)
+## Server Details
 
-A cron runs every Saturday that:
-1. Drops the staging database.
-2. Restores from the latest production backup.
-3. Runs `php artisan migrate --force` to apply any pending migrations.
-4. Sends a pass/fail notification.
+| Component | Details |
+|---|---|
+| OS | Ubuntu 22.04 LTS |
+| Web server | Nginx |
+| PHP | 8.2 + PHP-FPM (`/run/php/php8.2-fpm.sock`) |
+| Database | MySQL 8.0, database: `internal_tools`, user: `internal_tools` |
+| App directory | `/var/www/internal.filter.agency` |
+| Deploy user | `deploy` |
+| SSL | Let's Encrypt (Certbot, auto-renewing via systemd timer) |
 
-This is configured as a Laravel scheduled command in `app/Console/Kernel.php` (Phase 8).
+`.env` lives at `/var/www/internal.filter.agency/.env` — never committed to git. Google OAuth credentials and DB password are stored there.
 
 ---
 
@@ -108,23 +112,12 @@ php artisan harvest:import /path/to/detailed-time.csv
 # Reconcile import against Harvest CSV
 php artisan harvest:reconcile /path/to/detailed-time.csv
 
-# Seed the database (local/staging only)
+# Seed the database (local only)
 php artisan db:seed
 
 # Clear all caches
 php artisan optimize:clear
-
-# Check queue health
-php artisan queue:monitor database:100
 ```
-
----
-
-## Monitoring
-
-- **Error reporting:** Sentry (production only) — alerts go to #dev-alerts Slack channel.
-- **Uptime:** Authenticated cron check from another Filter server — pings `/timesheet` with a service account session. Alerts via Slack.
-- **Laravel Pulse:** `/pulse` (admin-only) — shows slow queries, job failures, exception counts.
 
 ---
 
@@ -132,6 +125,5 @@ php artisan queue:monitor database:100
 
 | Role | Person | Contact |
 |---|---|---|
-| Product owner | Paul Halfpenny | paul@filter.agency |
-| JDW report owner | Olly | olly@filter.agency |
-| Server access | Forge admin | see 1Password vault "Filter Infra" |
+| Product owner | Paul Halfpenny | paul@filteragency.com |
+| Server SSH key | deploy user | `~/.ssh/internal_tools_actions_deploy` (local Mac) |
