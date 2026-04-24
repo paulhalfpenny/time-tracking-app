@@ -50,6 +50,17 @@ class Index extends Component
             'editWeeklyCapacity' => 'required|numeric|min:0|max:168',
         ]);
 
+        if ((int) $this->editingId === auth()->id()) {
+            if ($this->editRole !== Role::Admin->value) {
+                $this->addError('editRole', 'You cannot change your own role.');
+                return;
+            }
+            if (! $this->editIsActive) {
+                $this->addError('editIsActive', 'You cannot deactivate yourself.');
+                return;
+            }
+        }
+
         User::findOrFail((int) $this->editingId)->update([
             'name' => $this->editName,
             'role' => Role::from($this->editRole),
