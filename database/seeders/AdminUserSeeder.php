@@ -10,7 +10,7 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminEmail = config('app.admin_email', env('ADMIN_EMAIL', 'paul@filter.agency'));
+        $adminEmail = config('app.admin_email', env('ADMIN_EMAIL'));
 
         User::firstOrCreate(
             ['email' => $adminEmail],

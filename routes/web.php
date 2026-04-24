@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 // Local-only demo login — bypasses Google SSO for local tours.
 if (app()->environment('local')) {
     Route::get('/demo-login', function () {
-        $user = App\Models\User::where('email', 'paul@filteragency.com')->firstOrFail();
+        $user = App\Models\User::where('email', config('app.admin_email', env('ADMIN_EMAIL')))->firstOrFail();
         auth()->login($user);
 
         return redirect()->route('timesheet');
