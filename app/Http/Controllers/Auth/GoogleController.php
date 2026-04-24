@@ -33,12 +33,12 @@ class GoogleController extends Controller
         $emailVerified = $googleUser->user['email_verified'] ?? false;
 
         if (
-            $hd !== 'filter.agency' ||
-            ! str_ends_with($email, '@filter.agency') ||
+            $hd !== 'filteragency.com' ||
+            ! str_ends_with($email, '@filteragency.com') ||
             ! $emailVerified
         ) {
             return redirect()->route('auth.error')
-                ->with('error', 'Access is restricted to filter.agency accounts.');
+                ->with('error', 'Access is restricted to filteragency.com accounts.');
         }
 
         $user = User::where('google_sub', $googleUser->getId())
