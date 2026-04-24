@@ -19,7 +19,7 @@ class GoogleController extends Controller
 
         return $provider
             ->scopes(['openid', 'email', 'profile', 'https://www.googleapis.com/auth/calendar.readonly'])
-            ->with(['access_type' => 'offline', 'prompt' => 'consent'])
+            ->with(['access_type' => 'offline', 'prompt' => 'select_account'])
             ->redirect();
     }
 
