@@ -256,7 +256,8 @@
 
         {{-- Modal backdrop + centred dialog --}}
         <div
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            class="fixed inset-0 z-50 flex items-start justify-center bg-black/40"
+            style="padding-top: 22vh"
             @keydown.escape.window="$wire.closeModal()"
         >
             <div
