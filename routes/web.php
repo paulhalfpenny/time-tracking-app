@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Livewire\Admin\Clients\Index as AdminClients;
-use App\Livewire\Admin\Projects\Create as AdminProjectCreate;
 use App\Livewire\Admin\Projects\Edit as AdminProjectEdit;
 use App\Livewire\Admin\Projects\Index as AdminProjects;
 use App\Livewire\Admin\Rates\Index as AdminRates;
@@ -45,6 +44,22 @@ Route::post('/auth/logout', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/', fn () => redirect()->route('timesheet'));
     Route::get('/timesheet', DayView::class)->name('timesheet');
+    Route::get('/timesheet/song/{date}', function (string $date) {
+        $path = base_path('sourcefiles/songs/depeche_mode_song_titles.csv');
+        $handle = fopen($path, 'r');
+        $songs = [];
+        fgetcsv($handle);
+        while (($row = fgetcsv($handle)) !== false) {
+            if (($row[3] ?? '') === 'album_track') {
+                $songs[] = ['song_name' => $row[0], 'album' => $row[1], 'year' => $row[2]];
+            }
+        }
+        fclose($handle);
+        // Seed by date so same day always returns same song
+        mt_srand((int) crc32($date));
+        $song = $songs[mt_rand(0, count($songs) - 1)];
+        return response()->json($song);
+    })->name('timesheet.song');
 
     // Report routes (manager + admin)
     Route::middleware('can:access-reports')->prefix('reports')->name('reports.')->group(function () {
@@ -63,7 +78,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/clients', AdminClients::class)->name('clients');
         Route::get('/tasks', AdminTasks::class)->name('tasks');
         Route::get('/projects', AdminProjects::class)->name('projects');
-        Route::get('/projects/create', AdminProjectCreate::class)->name('projects.create');
         Route::get('/projects/{project}/edit', AdminProjectEdit::class)->name('projects.edit');
         Route::get('/rates', AdminRates::class)->name('rates');
     });

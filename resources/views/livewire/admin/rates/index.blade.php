@@ -4,14 +4,14 @@
         <p class="text-sm text-gray-500 mt-1">Read-only view of the resolved billable rate per assigned (project, user) combination.</p>
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-4 py-3 text-left font-medium text-gray-600">Project</th>
                     <th class="px-4 py-3 text-left font-medium text-gray-600">Client</th>
-                    <th class="px-4 py-3 text-left font-medium text-gray-600">Team member</th>
-                    <th class="px-4 py-3 text-right font-medium text-gray-600">Effective rate</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-600 w-48">Team member</th>
+                    <th class="px-4 py-3 text-right font-medium text-gray-600 w-40">Effective rate</th>
                     <th class="px-4 py-3 text-left font-medium text-gray-600">Source</th>
                 </tr>
             </thead>

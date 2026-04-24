@@ -8,7 +8,7 @@
         <div class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Client <span class="text-red-500">*</span></label>
-                <select wire:model="clientId" class="w-full border-gray-300 rounded text-sm">
+                <select wire:model="clientId" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                     <option value="">Select client…</option>
                     @foreach($clients as $client)
                         <option value="{{ $client->id }}">{{ $client->name }}</option>
@@ -20,12 +20,12 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Project code <span class="text-red-500">*</span></label>
-                    <input wire:model="code" type="text" placeholder="e.g. AAB001" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                    <input wire:model="code" type="text" placeholder="e.g. AAB001" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                     @error('code')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Billing type</label>
-                    <select wire:model="billingType" class="w-full border-gray-300 rounded text-sm">
+                    <select wire:model="billingType" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                         @foreach($billingTypes as $type)
                             <option value="{{ $type->value }}">{{ ucfirst(str_replace('_', ' ', $type->value)) }}</option>
                         @endforeach
@@ -35,13 +35,13 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Project name <span class="text-red-500">*</span></label>
-                <input wire:model="name" type="text" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                <input wire:model="name" type="text" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                 @error('name')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Default rate (£/hr)</label>
-                <input wire:model="defaultRate" type="number" step="0.01" min="0" class="w-40 border-gray-300 rounded text-sm px-3 py-2">
+                <input wire:model="defaultRate" type="number" step="0.01" min="0" class="w-40 border border-gray-300 rounded text-sm px-3 py-2">
                 @error('defaultRate')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 

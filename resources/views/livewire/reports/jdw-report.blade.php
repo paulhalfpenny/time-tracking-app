@@ -10,11 +10,11 @@
             <input
                 type="month"
                 wire:model.live="month"
-                class="rounded border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                class="rounded-md border border-gray-300 bg-white text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="padding: 0.5rem 0.75rem;"
             >
             <button
                 wire:click="export"
-                class="inline-flex items-center gap-1.5 rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
                 Download .xlsx
             </button>
@@ -115,20 +115,20 @@
                     @forelse ($this->projectsRows as $project)
                         @php $rowTotal = collect($project['hours'])->whereNotNull()->sum(); @endphp
                         <tr class="hover:bg-gray-50">
-                            <td class="max-w-[200px] truncate px-3 py-1.5 font-medium text-gray-800" title="{{ $project['name'] }}">
+                            <td class="max-w-[200px] truncate px-3 py-2 font-medium text-gray-800" title="{{ $project['name'] }}">
                                 {{ $project['name'] }}
                             </td>
-                            <td class="px-2 py-1.5 text-gray-400">{{ $project['code'] ?? '' }}</td>
+                            <td class="px-2 py-2 text-gray-400">{{ $project['code'] ?? '' }}</td>
                             @foreach ($projectsTasks as $task)
                                 @php $h = $project['hours'][$task] ?? null; @endphp
-                                <td class="px-2 py-1.5 text-right tabular-nums text-gray-700">
+                                <td class="px-2 py-2 text-right tabular-nums text-gray-700">
                                     {{ $h !== null ? number_format($h, 2) : '' }}
                                 </td>
                             @endforeach
-                            <td class="px-2 py-1.5 text-right tabular-nums font-semibold text-gray-800">
+                            <td class="px-2 py-2 text-right tabular-nums font-semibold text-gray-800">
                                 {{ $rowTotal > 0 ? number_format($rowTotal, 2) : '' }}
                             </td>
-                            <td class="max-w-[160px] truncate px-2 py-1.5 text-gray-400" title="{{ $project['jdw_status'] ?? '' }}">
+                            <td class="max-w-[160px] truncate px-2 py-2 text-gray-400" title="{{ $project['jdw_status'] ?? '' }}">
                                 {{ $project['jdw_status'] ?? '' }}
                             </td>
                         </tr>
@@ -201,17 +201,17 @@
                     @forelse ($this->smRows as $project)
                         @php $rowTotal = collect($project['hours'])->whereNotNull()->sum(); @endphp
                         <tr class="hover:bg-gray-50">
-                            <td class="max-w-[200px] truncate px-3 py-1.5 font-medium text-gray-800" title="{{ $project['name'] }}">
+                            <td class="max-w-[200px] truncate px-3 py-2 font-medium text-gray-800" title="{{ $project['name'] }}">
                                 {{ $project['name'] }}
                             </td>
-                            <td class="px-2 py-1.5 text-gray-400">{{ $project['code'] ?? '' }}</td>
+                            <td class="px-2 py-2 text-gray-400">{{ $project['code'] ?? '' }}</td>
                             @foreach ($smTasks as $task)
                                 @php $h = $project['hours'][$task] ?? null; @endphp
-                                <td class="px-2 py-1.5 text-right tabular-nums text-gray-700">
+                                <td class="px-2 py-2 text-right tabular-nums text-gray-700">
                                     {{ $h !== null ? number_format($h, 2) : '' }}
                                 </td>
                             @endforeach
-                            <td class="px-2 py-1.5 text-right tabular-nums font-semibold text-gray-800">
+                            <td class="px-2 py-2 text-right tabular-nums font-semibold text-gray-800">
                                 {{ $rowTotal > 0 ? number_format($rowTotal, 2) : '' }}
                             </td>
                         </tr>

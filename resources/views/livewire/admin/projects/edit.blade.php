@@ -16,7 +16,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                        <select wire:model="clientId" class="w-full border-gray-300 rounded text-sm">
+                        <select wire:model="clientId" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                             @foreach($clients as $client)
                                 <option value="{{ $client->id }}">{{ $client->name }}</option>
                             @endforeach
@@ -25,12 +25,12 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                            <input wire:model="code" type="text" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                            <input wire:model="code" type="text" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                             @error('code')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Billing type</label>
-                            <select wire:model="billingType" class="w-full border-gray-300 rounded text-sm">
+                            <select wire:model="billingType" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                                 @foreach($billingTypes as $type)
                                     <option value="{{ $type->value }}">{{ ucfirst(str_replace('_', ' ', $type->value)) }}</option>
                                 @endforeach
@@ -39,21 +39,21 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input wire:model="name" type="text" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                        <input wire:model="name" type="text" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                         @error('name')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Default rate (£/hr)</label>
-                            <input wire:model="defaultRate" type="number" step="0.01" min="0" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                            <input wire:model="defaultRate" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Starts on</label>
-                            <input wire:model="startsOn" type="date" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                            <input wire:model="startsOn" type="date" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Ends on</label>
-                            <input wire:model="endsOn" type="date" class="w-full border-gray-300 rounded text-sm px-3 py-2">
+                            <input wire:model="endsOn" type="date" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                         </div>
                     </div>
                 </div>
@@ -65,7 +65,7 @@
                 <div class="space-y-2">
                     @foreach($allTasks as $task)
                         @php $assigned = isset($taskAssignments[$task->id]); @endphp
-                        <div class="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                        <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                             <input
                                 type="checkbox"
                                 id="task-{{ $task->id }}"
@@ -98,7 +98,7 @@
                 <div class="space-y-2">
                     @foreach($allUsers as $user)
                         @php $assigned = isset($userAssignments[$user->id]); @endphp
-                        <div class="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                        <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                             <input
                                 type="checkbox"
                                 id="user-{{ $user->id }}"
@@ -116,7 +116,7 @@
                                         min="0"
                                         wire:model="userAssignments.{{ $user->id }}.hourly_rate_override"
                                         placeholder="—"
-                                        class="w-24 border-gray-300 rounded text-sm px-2 py-1"
+                                        class="w-24 border border-gray-300 rounded text-sm px-3 py-2"
                                     >
                                 </div>
                             @endif
@@ -133,7 +133,7 @@
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
-                        <select wire:model="jdwCategory" class="w-full border-gray-300 rounded text-sm">
+                        <select wire:model="jdwCategory" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                             <option value="">None</option>
                             @foreach($jdwCategories as $cat)
                                 <option value="{{ $cat->value }}">{{ ucfirst(str_replace('_', ' ', $cat->value)) }}</option>
@@ -142,19 +142,19 @@
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Sort order</label>
-                        <input wire:model="jdwSortOrder" type="number" min="0" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                        <input wire:model="jdwSortOrder" type="number" min="0" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                        <input wire:model="jdwStatus" type="text" placeholder="e.g. Live" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                        <input wire:model="jdwStatus" type="text" placeholder="e.g. Live" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Est. launch</label>
-                        <input wire:model="jdwEstimatedLaunch" type="text" placeholder="e.g. Q2 2026, TBC" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                        <input wire:model="jdwEstimatedLaunch" type="text" placeholder="e.g. Q2 2026, TBC" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                        <textarea wire:model="jdwDescription" rows="4" class="w-full border-gray-300 rounded text-sm px-2 py-1.5"></textarea>
+                        <textarea wire:model="jdwDescription" rows="4" class="w-full border border-gray-300 rounded text-sm px-3 py-2"></textarea>
                     </div>
                 </div>
             </div>

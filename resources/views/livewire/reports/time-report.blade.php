@@ -2,7 +2,7 @@
     @include('livewire.reports.partials.header', ['title' => 'Time Report', 'totals' => $totals])
 
     {{-- Group-by tabs --}}
-    <div class="bg-white rounded-lg border border-gray-200">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <div class="flex border-b border-gray-200 px-4">
             @foreach(['client' => 'Client', 'project' => 'Project', 'task' => 'Task', 'user' => 'User'] as $value => $label)
             <button wire:click="$set('groupBy', '{{ $value }}')"

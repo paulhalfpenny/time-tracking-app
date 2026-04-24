@@ -1,7 +1,7 @@
 <div>
     @include('livewire.reports.partials.header', ['title' => 'Clients', 'totals' => $totals])
 
-    <div class="bg-white rounded-lg border border-gray-200">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         @if($rows->isEmpty())
         <div class="py-16 text-center text-sm text-gray-400">No entries in this period.</div>
         @else

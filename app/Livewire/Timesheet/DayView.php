@@ -28,13 +28,7 @@ class DayView extends Component
 
     public ?int $editingEntryId = null;
 
-    // Step 1 — project picker
-    public string $projectSearch = '';
-
     public ?int $selectedProjectId = null;
-
-    // Step 2 — task picker
-    public string $taskSearch = '';
 
     public ?int $selectedTaskId = null;
 
@@ -111,25 +105,6 @@ class DayView extends Component
         $this->resetModal();
     }
 
-    public function selectProject(int $projectId): void
-    {
-        $this->selectedProjectId = $projectId;
-        $this->selectedTaskId = null;
-        $this->taskSearch = '';
-    }
-
-    public function selectTask(int $taskId): void
-    {
-        $this->selectedTaskId = $taskId;
-    }
-
-    public function backToProjectPicker(): void
-    {
-        $this->selectedProjectId = null;
-        $this->selectedTaskId = null;
-        $this->projectSearch = '';
-        $this->taskSearch = '';
-    }
 
     public function startTimerFromModal(): void
     {
@@ -313,6 +288,7 @@ class DayView extends Component
 
         $weekEntries = TimeEntry::where('user_id', $user->id)
             ->whereBetween('spent_on', [$weekStart->toDateString(), $weekStart->addDays(6)->toDateString()])
+            ->select(['spent_on', 'hours'])
             ->get();
 
         $dayTotals = $weekEntries->groupBy(fn (TimeEntry $e) => $e->spent_on->toDateString())
@@ -329,16 +305,28 @@ class DayView extends Component
 
         $dayTotal = $dayEntries->sum(fn (TimeEntry $e) => (float) $e->hours);
 
-        // Project/task picker data
-        $projectsForPicker = Project::with(['client', 'tasks'])
-            ->where('is_archived', false)
-            ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
-            ->orderBy('name')
-            ->get();
-
-        $selectedProject = $this->selectedProjectId
-            ? $projectsForPicker->firstWhere('id', $this->selectedProjectId)
-            : null;
+        $projectsForPicker = \Illuminate\Support\Facades\Cache::remember(
+            "projects_picker_{$user->id}",
+            now()->addMinutes(10),
+            fn () => Project::with(['client', 'tasks'])
+                ->where('is_archived', false)
+                ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($p) => [
+                    'id'          => $p->id,
+                    'name'        => $p->name,
+                    'client_name' => $p->client->name,
+                    'tasks'       => $p->tasks->map(fn ($t) => [
+                        'id'          => $t->id,
+                        'name'        => $t->name,
+                        'colour'      => $t->colour,
+                        'is_billable' => (bool) $t->pivot->getAttribute('is_billable'),
+                    ])->values()->all(),
+                ])
+                ->values()
+                ->all()
+        );
 
         // Track which calendar event titles are already logged today
         $usedEventTitles = $dayEntries->pluck('notes')->filter()->map(fn ($n) => strtolower($n))->all();
@@ -350,37 +338,17 @@ class DayView extends Component
             'dayEntries' => $dayEntries,
             'dayTotal' => $dayTotal,
             'projectsForPicker' => $projectsForPicker,
-            'selectedProject' => $selectedProject,
             'usedEventTitles' => $usedEventTitles,
-            'emptySong' => $this->randomSong(),
+            'emptySong' => null,
         ]);
     }
 
-    /** @return array{song_name: string, album: string, year: string} */
-    private function randomSong(): array
-    {
-        $path = base_path('sourcefiles/songs/depeche_mode_song_titles.csv');
-        $handle = fopen($path, 'r');
-        $songs = [];
-
-        fgetcsv($handle); // skip header
-        while (($row = fgetcsv($handle)) !== false) {
-            if (($row[3] ?? '') === 'album_track') {
-                $songs[] = ['song_name' => $row[0], 'album' => $row[1], 'year' => $row[2]];
-            }
-        }
-        fclose($handle);
-
-        return $songs[array_rand($songs)];
-    }
 
     private function resetModal(): void
     {
         $this->editingEntryId = null;
         $this->selectedProjectId = null;
         $this->selectedTaskId = null;
-        $this->projectSearch = '';
-        $this->taskSearch = '';
         $this->hoursInput = '';
         $this->notes = '';
         $this->hoursError = '';

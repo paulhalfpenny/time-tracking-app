@@ -15,7 +15,7 @@ trait HasReportPeriod
 
     public string $to = '';
 
-    public bool $activeProjectsOnly = false;
+    public bool $showArchived = false;
 
     public bool $includeFixedFee = false;
 
@@ -65,7 +65,7 @@ trait HasReportPeriod
             from: CarbonImmutable::parse($this->from),
             to: CarbonImmutable::parse($this->to),
             userId: $userId,
-            activeProjectsOnly: $this->activeProjectsOnly,
+            activeProjectsOnly: ! $this->showArchived,
             includeFixedFee: $this->includeFixedFee,
         );
     }

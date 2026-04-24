@@ -3,7 +3,7 @@
         <h1 class="text-xl font-semibold text-gray-900">Users</h1>
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
@@ -25,11 +25,11 @@
                                 <div class="grid grid-cols-6 gap-3 items-end">
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                                        <input wire:model="editName" type="text" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                                        <input wire:model="editName" type="text" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Role</label>
-                                        <select wire:model="editRole" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                                        <select wire:model="editRole" class="w-full border border-gray-300 rounded text-sm px-3 py-2" style="-webkit-appearance:none;-moz-appearance:none;appearance:none;">
                                             @foreach($roles as $role)
                                                 <option value="{{ $role->value }}">{{ ucfirst($role->value) }}</option>
                                             @endforeach
@@ -37,15 +37,15 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Job Title</label>
-                                        <input wire:model="editRoleTitle" type="text" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                                        <input wire:model="editRoleTitle" type="text" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Rate (£/hr)</label>
-                                        <input wire:model="editDefaultRate" type="number" step="0.01" min="0" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                                        <input wire:model="editDefaultRate" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Capacity (hrs)</label>
-                                        <input wire:model="editWeeklyCapacity" type="number" step="0.5" min="0" max="168" class="w-full border-gray-300 rounded text-sm px-2 py-1.5">
+                                        <input wire:model="editWeeklyCapacity" type="number" step="0.5" min="0" max="168" class="w-full border border-gray-300 rounded text-sm px-3 py-2">
                                     </div>
                                     <div class="flex items-center gap-3 pb-1">
                                         <label class="flex items-center gap-1.5 text-xs">
@@ -59,8 +59,8 @@
                                 @error('editName')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 @error('editDefaultRate')<p class="text-red-600 text-xs mt-1">{{ $message }}</p>@enderror
                                 <div class="flex gap-2 mt-2">
-                                    <button wire:click="save" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Save</button>
-                                    <button wire:click="cancel" class="px-3 py-1.5 bg-white border border-gray-300 text-xs rounded hover:bg-gray-50">Cancel</button>
+                                    <button wire:click="save" class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Save</button>
+                                    <button wire:click="cancel" class="px-3 py-2 bg-white border border-gray-300 text-sm rounded hover:bg-gray-50">Cancel</button>
                                 </div>
                             </td>
                         </tr>

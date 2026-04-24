@@ -28,8 +28,15 @@
                 {{ \Carbon\Carbon::parse($selectedDate)->format('l, j F Y') }}
             </h2>
         </div>
+        <div class="flex items-center gap-2">
         <button
-            wire:click="openNewModal"
+            wire:click="selectDate('{{ \Carbon\Carbon::today()->toDateString() }}')"
+            class="inline-flex items-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition {{ $selectedDate === \Carbon\Carbon::today()->toDateString() ? 'invisible' : '' }}"
+        >
+            Today
+        </button>
+        <button
+            @click="$wire.showModal = true; $wire.openNewModal()"
             class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
             title="New entry (N)"
         >
@@ -38,6 +45,7 @@
             </svg>
             Track time
         </button>
+        </div>
     </div>
 
     {{-- Week strip --}}
@@ -69,10 +77,15 @@
 
     {{-- Entries list --}}
     @if ($dayEntries->isEmpty())
-        <div class="rounded-xl bg-gray-100 flex items-center justify-center px-8 text-center" style="min-height: 350px">
-            <div>
-                <p class="text-lg italic text-gray-500">"{{ $emptySong['song_name'] }}"</p>
-                <p class="mt-2 text-sm text-gray-400">{{ $emptySong['album'] }} &middot; {{ $emptySong['year'] }} &middot; Depeche Mode</p>
+        <div
+            class="rounded-xl bg-gray-100 flex items-center justify-center px-8 text-center"
+            style="min-height: 350px"
+            x-data="{ song: null }"
+            x-init="fetch('/timesheet/song/{{ $selectedDate }}').then(r => r.json()).then(d => song = d)"
+        >
+            <div x-show="song">
+                <p class="text-lg italic text-gray-500" x-text="'&quot;' + (song?.song_name ?? '') + '&quot;'"></p>
+                <p class="mt-2 text-sm text-gray-400" x-text="(song?.album ?? '') + ' · ' + (song?.year ?? '') + ' · Depeche Mode'"></p>
             </div>
         </div>
     @else
@@ -163,7 +176,7 @@
     {{-- ============================================================
          Entry modal
     ============================================================ --}}
-    @if ($showModal)
+    <div x-show="$wire.showModal" style="display:none">
 
         {{-- ============================================================
              Calendar sidebar — slides in from the left over the page
@@ -251,6 +264,42 @@
                 x-data="{
                     projectOpen: false,
                     taskOpen: false,
+                    projectSearch: '',
+                    selectedProjectId: {{ $selectedProjectId ?? 'null' }},
+                    selectedTaskId: {{ $selectedTaskId ?? 'null' }},
+                    projects: {{ Js::from($projectsForPicker) }},
+                    get selectedProject() {
+                        return this.projects.find(p => p.id === this.selectedProjectId) ?? null;
+                    },
+                    get selectedTask() {
+                        return this.selectedProject?.tasks.find(t => t.id === this.selectedTaskId) ?? null;
+                    },
+                    get groupedProjects() {
+                        const q = this.projectSearch.toLowerCase();
+                        const filtered = q
+                            ? this.projects.filter(p => p.name.toLowerCase().includes(q) || p.client_name.toLowerCase().includes(q))
+                            : this.projects;
+                        const groups = {};
+                        filtered.forEach(p => { (groups[p.client_name] ??= []).push(p); });
+                        return Object.entries(groups).sort(([a],[b]) => a.localeCompare(b));
+                    },
+                    pickProject(id) {
+                        this.selectedProjectId = id;
+                        this.selectedTaskId = null;
+                        this.projectSearch = '';
+                        this.projectOpen = false;
+                        this.taskOpen = true;
+                    },
+                    pickTask(id) {
+                        this.selectedTaskId = id;
+                        this.taskOpen = false;
+                    },
+                    async doSave(isTimer) {
+                        $wire.selectedProjectId = this.selectedProjectId;
+                        $wire.selectedTaskId = this.selectedTaskId;
+                        await $nextTick();
+                        isTimer ? $wire.startTimerFromModal() : $wire.save();
+                    },
                     get isTimerMode() {
                         const h = $wire.hoursInput ?? '';
                         return h.trim() === '';
@@ -281,14 +330,15 @@
                             @click="projectOpen = !projectOpen; taskOpen = false"
                             class="w-full flex items-center justify-between border border-gray-300 rounded-lg px-4 py-3 text-left bg-white hover:border-gray-400 transition focus:outline-none focus:ring-2 focus:ring-green-500"
                         >
-                            @if ($selectedProject)
+                            <template x-if="selectedProject">
                                 <div class="min-w-0">
-                                    <div class="text-xs text-gray-500 leading-none mb-0.5">{{ $selectedProject->client->name }}</div>
-                                    <div class="font-semibold text-gray-900 text-sm leading-none">{{ $selectedProject->name }}</div>
+                                    <div class="text-xs text-gray-500 leading-none mb-0.5" x-text="selectedProject.client_name"></div>
+                                    <div class="font-semibold text-gray-900 text-sm leading-none" x-text="selectedProject.name"></div>
                                 </div>
-                            @else
+                            </template>
+                            <template x-if="!selectedProject">
                                 <span class="text-gray-400 text-sm">Select a project…</span>
-                            @endif
+                            </template>
                             <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
@@ -306,57 +356,51 @@
                             <div class="p-2 border-b border-gray-100">
                                 <input
                                     type="text"
-                                    wire:model.live="projectSearch"
+                                    x-model="projectSearch"
                                     placeholder="Search projects…"
                                     class="w-full text-sm px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                                     x-init="$el.focus()"
                                 />
                             </div>
                             <div class="max-h-60 overflow-y-auto py-1">
-                                @php
-                                    $grouped = $projectsForPicker
-                                        ->when($projectSearch !== '', fn ($c) => $c->filter(
-                                            fn ($p) => str_contains(strtolower($p->name), strtolower($projectSearch))
-                                                || str_contains(strtolower($p->client->name), strtolower($projectSearch))
-                                        ))
-                                        ->groupBy(fn ($p) => $p->client->name)
-                                        ->sortKeys();
-                                @endphp
-                                @forelse ($grouped as $clientName => $projects)
-                                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5 mt-1 first:mt-0">{{ $clientName }}</div>
-                                    @foreach ($projects as $project)
-                                        <button
-                                            type="button"
-                                            wire:click="selectProject({{ $project->id }})"
-                                            @click="projectOpen = false; taskOpen = true"
-                                            class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition"
-                                        >{{ $project->name }}</button>
-                                    @endforeach
-                                @empty
+                                <template x-if="groupedProjects.length === 0">
                                     <p class="text-sm text-gray-400 px-3 py-4 text-center">No projects found.</p>
-                                @endforelse
+                                </template>
+                                <template x-for="[clientName, projects] in groupedProjects" :key="clientName">
+                                    <div>
+                                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5 mt-1" x-text="clientName"></div>
+                                        <template x-for="project in projects" :key="project.id">
+                                            <button
+                                                type="button"
+                                                @click="pickProject(project.id)"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition"
+                                                x-text="project.name"
+                                            ></button>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
 
                     {{-- Task dropdown --}}
-                    @php $chosenTask = $selectedProject?->tasks->firstWhere('id', $selectedTaskId); @endphp
                     <div class="relative z-10">
                         <button
                             type="button"
-                            @click="if ({{ $selectedProjectId ? 'true' : 'false' }}) { taskOpen = !taskOpen; projectOpen = false; }"
-                            class="w-full flex items-center justify-between border rounded-lg px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-green-500
-                                {{ $selectedProjectId ? 'border-gray-300 bg-white hover:border-gray-400' : 'border-gray-200 bg-gray-50 cursor-not-allowed' }}"
+                            @click="if (selectedProjectId) { taskOpen = !taskOpen; projectOpen = false; }"
+                            :class="selectedProjectId ? 'border-gray-300 bg-white hover:border-gray-400' : 'border-gray-200 bg-gray-50 cursor-not-allowed'"
+                            class="w-full flex items-center justify-between border rounded-lg px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-green-500"
                         >
-                            @if ($chosenTask)
+                            <template x-if="selectedTask">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $chosenTask->colour }}"></span>
-                                    <span class="font-medium text-gray-900 text-sm">{{ $chosenTask->name }}</span>
+                                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="'background:' + selectedTask.colour"></span>
+                                    <span class="font-medium text-gray-900 text-sm" x-text="selectedTask.name"></span>
                                 </div>
-                            @else
-                                <span class="text-sm {{ $selectedProjectId ? 'text-gray-400' : 'text-gray-300' }}">Select a task…</span>
-                            @endif
-                            <svg class="w-4 h-4 flex-shrink-0 ml-2 {{ $selectedProjectId ? 'text-gray-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            </template>
+                            <template x-if="!selectedTask">
+                                <span class="text-sm" :class="selectedProjectId ? 'text-gray-400' : 'text-gray-300'">Select a task…</span>
+                            </template>
+                            <svg class="w-4 h-4 flex-shrink-0 ml-2" :class="selectedProjectId ? 'text-gray-400' : 'text-gray-300'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
@@ -371,62 +415,55 @@
                             style="display: none"
                         >
                             <div class="max-h-60 overflow-y-auto py-1">
-                                @if ($selectedProject)
-                                    @php
-                                        $assignedTasks = $selectedProject->tasks ?? collect();
-                                        $billableTasks = $assignedTasks->filter(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
-                                        $nonBillableTasks = $assignedTasks->reject(fn ($t) => (bool) $t->pivot->getAttribute('is_billable'));
-                                    @endphp
-                                    @if ($billableTasks->isNotEmpty())
-                                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5">Billable</div>
-                                        @foreach ($billableTasks->sortBy('name') as $task)
-                                            <button
-                                                type="button"
-                                                wire:click="selectTask({{ $task->id }})"
-                                                @click="taskOpen = false"
-                                                class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition flex items-center gap-2"
-                                            >
-                                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
-                                                {{ $task->name }}
-                                            </button>
-                                        @endforeach
-                                    @endif
-                                    @if ($nonBillableTasks->isNotEmpty())
-                                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5 {{ $billableTasks->isNotEmpty() ? 'mt-1' : '' }}">Non-billable</div>
-                                        @foreach ($nonBillableTasks->sortBy('name') as $task)
-                                            <button
-                                                type="button"
-                                                wire:click="selectTask({{ $task->id }})"
-                                                @click="taskOpen = false"
-                                                class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 hover:text-gray-700 transition flex items-center gap-2"
-                                            >
-                                                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $task->colour }}"></span>
-                                                {{ $task->name }}
-                                            </button>
-                                        @endforeach
-                                    @endif
-                                    @if ($billableTasks->isEmpty() && $nonBillableTasks->isEmpty())
-                                        <p class="text-sm text-gray-400 px-3 py-4 text-center">No tasks assigned.</p>
-                                    @endif
-                                @endif
+                                <template x-if="selectedProject">
+                                    <div>
+                                        <template x-if="selectedProject.tasks.filter(t => t.is_billable).length > 0">
+                                            <div>
+                                                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5">Billable</div>
+                                                <template x-for="task in [...selectedProject.tasks].filter(t => t.is_billable).sort((a,b) => a.name.localeCompare(b.name))" :key="task.id">
+                                                    <button type="button" @click="pickTask(task.id)"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-green-50 hover:text-green-700 transition flex items-center gap-2">
+                                                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="'background:' + task.colour"></span>
+                                                        <span x-text="task.name"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="selectedProject.tasks.filter(t => !t.is_billable).length > 0">
+                                            <div>
+                                                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide px-3 py-1.5">Non-billable</div>
+                                                <template x-for="task in [...selectedProject.tasks].filter(t => !t.is_billable).sort((a,b) => a.name.localeCompare(b.name))" :key="task.id">
+                                                    <button type="button" @click="pickTask(task.id)"
+                                                        class="w-full text-left px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 hover:text-gray-700 transition flex items-center gap-2">
+                                                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="'background:' + task.colour"></span>
+                                                        <span x-text="task.name"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="selectedProject.tasks.length === 0">
+                                            <p class="text-sm text-gray-400 px-3 py-4 text-center">No tasks assigned.</p>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
 
                     {{-- Notes + Time row --}}
-                    <div class="flex gap-3 items-start">
+                    <div class="flex gap-3 items-stretch">
                         <textarea
                             wire:model="notes"
-                            rows="3"
+                            rows="1"
                             placeholder="Notes (optional)"
                             class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none placeholder-gray-400"
                         ></textarea>
-                        <div class="flex-shrink-0 w-24">
+                        <div class="flex-shrink-0 w-24 flex flex-col">
                             <input
                                 type="text"
                                 wire:model="hoursInput"
                                 placeholder="0.00"
-                                class="w-full border {{ $hoursError ? 'border-red-400' : 'border-gray-300' }} rounded-lg px-3 py-2.5 text-sm text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                                class="w-full h-full border {{ $hoursError ? 'border-red-400' : 'border-gray-300' }} rounded-lg px-3 py-2.5 text-sm text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
                             />
                             @if ($hoursError)
                                 <p class="text-red-500 text-xs mt-1 text-center">{{ $hoursError }}</p>
@@ -438,18 +475,11 @@
 
                 {{-- Modal footer --}}
                 <div class="flex items-center px-6 py-4 border-t border-gray-100">
-                    @if ($editingEntryId)
-                        <button
-                            wire:click="save"
-                            class="px-5 py-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-full transition"
-                        >Save entry</button>
-                    @else
-                        <button
-                            @click="isTimerMode ? $wire.startTimerFromModal() : $wire.save()"
-                            class="px-5 py-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-full transition"
-                            x-text="isTimerMode ? 'Start timer' : 'Save entry'"
-                        ></button>
-                    @endif
+                    <button
+                        @click="doSave({{ $editingEntryId ? 'false' : 'isTimerMode' }})"
+                        class="px-5 py-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-full transition"
+                        x-text="{{ $editingEntryId ? "'Save entry'" : "isTimerMode ? 'Start timer' : 'Save entry'" }}"
+                    ></button>
                     <button
                         wire:click="closeModal"
                         class="ml-3 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-full transition"
@@ -475,7 +505,7 @@
             </div>
 
         </div>{{-- end modal backdrop --}}
-    @endif
+    </div>{{-- end x-show wrapper --}}
 
     {{-- 60-second poll for running timers --}}
     <div wire:poll.60000ms="refreshForTimer" class="hidden"></div>
